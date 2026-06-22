@@ -1,0 +1,52 @@
+name: Exact 5-Min Auto Update Sportzx
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # প্রতি ৫ মিনিট পর পর রান হবে
+  workflow_dispatch:
+  repository_dispatch:
+    types: [trigger_update]
+
+permissions:
+  contents: write
+
+jobs:
+  update-json:
+    runs-on: ubuntu-latest
+
+    env:
+      APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+      FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+      FIREBASE_FID: ${{ secrets.FIREBASE_FID }}
+      FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+      PROJECT_NUMBER: ${{ secrets.PROJECT_NUMBER }}
+      PACKAGE_NAME: ${{ secrets.PACKAGE_NAME }}
+      AES_SECRET: ${{ secrets.AES_SECRET }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pycryptodome
+
+      - name: Run Sportzx Python Script
+        run: python sportzx.py
+
+      - name: Commit and Push Updates
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action Bot"
+          # এই লাইনটা সবথেকে জরুরি: দুইটা ফাইলই অ্যাড করতে হবে
+          git add Sportzx.json manual_data.json
+          git commit -m "Auto Update: Cleaned Expired Matches & Updated JSON" || echo "No changes to commit"
+          git push
